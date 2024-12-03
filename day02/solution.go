@@ -15,7 +15,7 @@ func handleError(err error) {
 }
 
 func getLists() []string {
-	file, err := os.Open("sampleInput.txt")
+	file, err := os.Open("input.txt")
 	handleError(err)
 	sc := bufio.NewScanner(file)
 	var lines []string
@@ -61,49 +61,89 @@ func solutionPartOne() {
 	println(len(lines) - unSafeCount)
 }
 
-func solutionPartTwo() {
-	lines := getLists()
+func convertToIntArray(arr []string) []int {
+	toReturn := make([]int, len(arr))
 
-	unSafeCount := 0
+	for idx, v := range arr {
+		vInt, _ := strconv.Atoi(v)
+		toReturn[idx] = vInt
+	}
+
+	return toReturn
+}
+
+func solutionPartTwo() {
+	lines := getLists() // Assumes getLists() reads and returns the input as a slice of strings
+
+	safeCount := 0
 
 	for _, v := range lines {
 		lineNums := strings.Split(v, " ")
-		monotonicExceptionCount := 0
-		diffExceptionCount := 0
+		lineNumsAsInt := convertToIntArray(lineNums)
 
-		sign := 0
-		for i := 0; i < len(lineNums)-2; i++ {
-			curr, _ := strconv.Atoi(lineNums[i])
-			next, _ := strconv.Atoi(lineNums[i+1])
-			nextNext, _ := strconv.Atoi(lineNums[i+2])
-			diff := next - curr
-			absDiff := math.Abs((float64)(next - curr))
-			if absDiff > 3 {
-				unSafeCount++
-			}
+		//all increasing
+		// all decreasing
+		isMonotonic := isMonotonic(lineNumsAsInt)
+		// diff is > 1 and < 3
+		isJumpWithinLimit := jumpWithinLimit(lineNumsAsInt)
+		valid := isMonotonic && isJumpWithinLimit
 
-			if (sign > 0 && diff < 0) || (sign < 0 && diff > 0) || (diff == 0) {
-				if absDiff <= 3 && math.Abs((float64)(nextNext-curr)) <= 3 {
-					continue
-				} else {
-					unSafeCount++
-				}
-			}
-
-			if diff < 0 {
-				sign = -1
-			} else if diff > 0 {
-				sign = 1
-			}
+		if !valid {
+			valid = problemDampanable(lineNumsAsInt)
 		}
 
-		println("line", v)
-		println("monotonic", monotonicExceptionCount)
-		println("diff", diffExceptionCount)
-		println("unsafe", unSafeCount)
+		if valid {
+			safeCount++
+		} else {
+			println("unsafe report: ", v)
+		}
 	}
-	println(len(lines) - unSafeCount)
+
+	println(safeCount)
 }
+
+func problemDampanable(nums []int) bool {
+	for i := range nums {
+		modifiedNums := make([]int, 0, len(nums)-1)
+		modifiedNums = append(modifiedNums, nums[:i]...)
+		modifiedNums = append(modifiedNums, nums[i+1:]...)
+
+		if isMonotonic(modifiedNums) && jumpWithinLimit(modifiedNums) {
+			return true
+		}
+	}
+	return false
+}
+
+func jumpWithinLimit(nums []int) bool {
+	for i := 0; i < len(nums)-1; i++ {
+		diff := nums[i+1] - nums[i]
+		absDiff := math.Abs((float64)(diff))
+
+		if absDiff > 3 || absDiff < 1 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func isMonotonic(nums []int) bool {
+	increasing := true
+	decreasing := true
+
+	for i := 0; i < len(nums)-1; i++ {
+		if nums[i] < nums[i+1] {
+			decreasing = false
+		}
+		if nums[i] > nums[i+1] {
+			increasing = false
+		}
+	}
+
+	return increasing || decreasing
+}
+
 func main() {
 	solutionPartOne()
 	solutionPartTwo()
